@@ -9,15 +9,21 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
+import se.ciserver.github.Push;
+import se.ciserver.github.PushParser;
+import se.ciserver.github.InvalidPayloadException;
 
 /**
- * A Jetty-based CI-server that can start locally and recieve HTTP-requests.
+ * A Jetty-based CI-server that can start locally and receive HTTP-requests.
  */
 public class ContinuousIntegrationServer extends AbstractHandler
 {
+    private final PushParser parser = new PushParser();
+
     /**
-     * Handles incoming HTTP requests for the CI server.
+     * Handles incoming HTTP requests for the CI server and presents necessary information.
      *
      * @param target      - The requested URL
      * @param baseRequest - Jetty-specific request object, used to mark the request as handled
@@ -33,13 +39,41 @@ public class ContinuousIntegrationServer extends AbstractHandler
                        HttpServletResponse response)
             throws IOException, ServletException
     {
-        response.setContentType("text/html;charset=utf-8");
-        response.setStatus(HttpServletResponse.SC_OK);
-        baseRequest.setHandled(true);
+        if ("/webhook".equals(target) && "POST".equalsIgnoreCase(request.getMethod()))
+        {
+            String json = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
 
-        System.out.println(target);
+            try
+            {
+                Push push = parser.parse(json);
 
-        response.getWriter().println("CI job done (placeholder)");
+                System.out.println("\nReceived push on branch : " + push.ref +
+                                   "\nAfter SHA               : " + push.after +
+                                   "\nRepository URL          : " + push.repository.clone_url +
+                                   "\nPusher name             : " + push.pusher.name +
+                                   "\n\nHead commit message     : " + push.head_commit.message);
+
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().println("Push received: " + push.after);
+            }
+            catch (InvalidPayloadException e)
+            {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().println("Invalid payload: " + e.getMessage());
+            }
+
+            baseRequest.setHandled(true);
+        }
+        else // Placeholder for other endpoints
+        {
+            response.setContentType("text/html;charset=utf-8");
+            response.setStatus(HttpServletResponse.SC_OK);
+            baseRequest.setHandled(true);
+
+            System.out.println(target);
+
+            response.getWriter().println("CI job done (placeholder)");
+        }
     }
 
     /**
@@ -56,5 +90,4 @@ public class ContinuousIntegrationServer extends AbstractHandler
         server.start();
         server.join();
     }
-
 }
