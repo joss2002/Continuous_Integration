@@ -11,6 +11,8 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.stream.Collectors;
 
+import se.ciserver.build.Compiler;
+import se.ciserver.build.CompilationResult;
 import se.ciserver.github.Push;
 import se.ciserver.github.PushParser;
 import se.ciserver.github.InvalidPayloadException;
@@ -20,7 +22,8 @@ import se.ciserver.github.InvalidPayloadException;
  */
 public class ContinuousIntegrationServer extends AbstractHandler
 {
-    private final PushParser parser = new PushParser();
+    private final PushParser parser   = new PushParser();
+    private final Compiler   compiler = new Compiler();
 
     /**
      * Handles incoming HTTP requests for the CI server and presents necessary information.
@@ -53,8 +56,25 @@ public class ContinuousIntegrationServer extends AbstractHandler
                                    "\nPusher name             : " + push.pusher.name +
                                    "\n\nHead commit message     : " + push.head_commit.message);
 
+                System.out.println("\nStarting compilation...");
+                CompilationResult result = compiler.compile(
+                    push.repository.clone_url,
+                    push.ref,
+                    push.after);
+
+                if (result.success)
+                {
+                    System.out.println("\nCompilation SUCCEEDED");
+                }
+                else
+                {
+                    System.out.println("\nCompilation FAILED");
+                }
+
                 response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().println("Push received: " + push.after);
+                response.getWriter().println(
+                    (result.success ? "Compilation succeeded" : "Compilation failed")
+                    + " for commit: " + push.after);
             }
             catch (InvalidPayloadException e)
             {

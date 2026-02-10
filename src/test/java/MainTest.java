@@ -10,6 +10,8 @@ import org.eclipse.jetty.server.ServerConnector;
 
 import se.ciserver.TestUtils;
 import se.ciserver.ContinuousIntegrationServer;
+import se.ciserver.build.Compiler;
+import se.ciserver.build.CompilationResult;
 import se.ciserver.github.PushParser;
 import se.ciserver.github.Push;
 import se.ciserver.github.InvalidPayloadException;
@@ -122,5 +124,42 @@ public class MainTest
 
         PushParser parser = new PushParser();
         parser.parse(brokenJson);
+    }
+
+    /**
+     * Tests that CompilationResult correctly stores success and output.
+     */
+    @Test
+    public void compilationResultStoresValues()
+    {
+        CompilationResult success = new CompilationResult(true, "BUILD SUCCESS");
+        assertEquals(true, success.success);
+        assertEquals("BUILD SUCCESS", success.output);
+
+        CompilationResult failure = new CompilationResult(false, "BUILD FAILURE");
+        assertEquals(false, failure.success);
+        assertEquals("BUILD FAILURE", failure.output);
+    }
+
+    /**
+     * Tests that the Compiler handles a clone failure gracefully
+     * by returning a failed CompilationResult.
+     */
+    @Test
+    public void compilerHandlesCloneFailure()
+    {
+        Compiler failCompiler = new Compiler()
+        {
+            @Override
+            protected ProcessBuilder createProcessBuilder(String... command)
+            {
+                return new ProcessBuilder("false");
+            }
+        };
+
+        CompilationResult result = failCompiler.compile(
+            "https://invalid-url.example.com/repo.git", "main", "abc123");
+
+        assertEquals(false, result.success);
     }
 }
