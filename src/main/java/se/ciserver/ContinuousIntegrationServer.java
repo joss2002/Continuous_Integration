@@ -3,6 +3,10 @@ package se.ciserver;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.util.StringContentProvider;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -40,6 +44,29 @@ public class ContinuousIntegrationServer extends AbstractHandler
         System.out.println(target);
 
         response.getWriter().println("CI job done (placeholder)");
+    }
+
+    public static void setCommitStatus() {
+
+        try {
+
+            SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
+            HttpClient client = new HttpClient(sslContextFactory);
+            client.start();
+
+            ContentResponse response = client.POST("https://api.github.com/repos/NAME/REPO/statuses/SHA")
+                .header("Accept", "application/vnd.github+json")
+                .header("Authorization", "Bearer GITHUB_AUTH_TOKEN")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .content(new StringContentProvider("{\"state\":\"success\",\"description\":\"test 3!\",\"context\":\"ci_tester_auto\"}"), "application/json")
+                .send();
+
+            client.stop();
+        }
+        catch (Exception e) {
+            System.out.println(e);
+        }   
+        
     }
 
     /**

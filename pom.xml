@@ -20,6 +20,12 @@
             <artifactId>jetty-server</artifactId>
             <version>9.4.50.v20221201</version>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-client</artifactId>
+            <version>9.4.50.v20221201</version>
+        </dependency>
+
     </dependencies>
 
     <build>
