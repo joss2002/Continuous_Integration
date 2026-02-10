@@ -1,10 +1,18 @@
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import org.junit.Test;
 
-import se.ciserver.github.*;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+
 import se.ciserver.TestUtils;
+import se.ciserver.ContinuousIntegrationServer;
+import se.ciserver.github.PushParser;
+import se.ciserver.github.Push;
+import se.ciserver.github.InvalidPayloadException;
 
 /**
  * Test class
@@ -12,10 +20,79 @@ import se.ciserver.TestUtils;
 public class MainTest
 {
     /**
+     * Tests the CI-server for valid push event payload locally.
+     *
+     * @throws Exception If an input/output error occurs, if the server
+     *                   fails to start or if sending the HTTP request
+     *                   fails
+     */
+    @Test
+    public void ciServerHandlePushValidPayloadLocal() throws Exception
+    {
+        Server server = new Server(0);
+        server.setHandler(new ContinuousIntegrationServer());
+        server.start();
+        int port = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
+
+        String json = TestUtils.readFile("githubPush.json");
+
+        URL url = new URL("http://localhost:" + port + "/webhook");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream())
+        {
+            os.write(json.getBytes());
+        }
+
+        assertEquals(200, conn.getResponseCode());
+
+        server.stop();
+        server.join();
+    }
+
+    /**
+     * Tests the CI-server for invalid push event payload locally.
+     *
+     * @throws Exception If an input/output error occurs, if the server
+     *                   fails to start or if sending the HTTP request
+     *                   fails
+     */
+    @Test
+    public void ciServerHandlePushInvalidPayloadLocal() throws Exception
+    {
+        Server server = new Server(0);
+        server.setHandler(new ContinuousIntegrationServer());
+        server.start();
+        int port = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
+
+        String json = "{Invalid JSON}";
+
+        URL url = new URL("http://localhost:" + port + "/webhook");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream())
+        {
+            os.write(json.getBytes());
+        }
+
+        assertEquals(400, conn.getResponseCode());
+
+        server.stop();
+        server.join();
+    }
+
+    /**
      * Tests the PushParser class with a valid GitHub push payload
      * JSON file.
      *
-     * @throws Exception
+     * @throws Exception If the JSON file can not be read or if
+     *                   parsing the payload fails
      */
     @Test
     public void pushParserValidPayload() throws Exception
@@ -33,10 +110,10 @@ public class MainTest
     }
 
     /**
-     * Tests the PushParser class with a invalid GitHub push payload
+     * Tests the PushParser class with an invalid GitHub push payload
      * JSON file.
      *
-     * @throws Exception
+     * @throws Exception If the payload can not be parsed
      */
     @Test(expected = InvalidPayloadException.class)
     public void pushParseInvalidPayload() throws Exception
