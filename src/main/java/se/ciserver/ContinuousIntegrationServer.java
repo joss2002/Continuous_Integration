@@ -3,7 +3,9 @@ package se.ciserver;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.StringContentProvider;
@@ -13,6 +15,9 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
+import java.lang.reflect.Executable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import se.ciserver.github.Push;
@@ -90,46 +95,58 @@ public class ContinuousIntegrationServer extends AbstractHandler
         }
     }
 
+    /**
+     * Send a POST request setting the status of a git commit
+     * @param repository    - The repo the commit is in
+     * @param commitSHA     - The commit's SHA
+     * @param accessToken   - An access token with commit status permission for the repo
+     * @param status        - The status to set for the commit
+     * @param description   - Description of the status
+     * @param context       - The system setting the status
+     */
     public void setCommitStatus(Repository repository,
                                 String commitSHA,
-                                String authToken,
+                                String accessToken,
                                 CommitStatus status,
                                 String description,
-                                String context
-    ) {
+                                String context)
+                                
+    {
 
-        try {
+        String statusString = "";
 
-            String statusString = "";
-
-            switch (status) {
-                case failure:
-                    statusString = "failure";
-                    break;
-                case pending:
-                    statusString = "pending";
-                    break;
-                case success:
-                    statusString = "success";
-                    break;
-            }
-
-            SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
-            HttpClient client = new HttpClient(sslContextFactory);
-            client.start();
-
-            ContentResponse response = client.POST("https://api.github.com/repos/"+repository.owner+"/"+repository.name+"/statuses/"+commitSHA)
-                .header("Accept", "application/vnd.github+json")
-                .header("Authorization", "Bearer "+authToken)
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .content(new StringContentProvider("{\"state\":\""+statusString+"\",\"description\":\""+description+"\",\"context\":\""+context+"\"}"), "application/json")
-                .send();
-
-            client.stop();
+        switch (status) {
+            case failure:
+                statusString = "failure";
+                break;
+            case pending:
+                statusString = "pending";
+                break;
+            case success:
+                statusString = "success";
+                break;
         }
-        catch (Exception e) {
-            System.out.println(e);
-        }   
+
+        SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
+        HttpClient client = new HttpClient(sslContextFactory);
+        try {
+            client.start();
+        } catch (Exception e) {
+            //
+        }
+        
+        try {
+        ContentResponse response = client.POST("https://api.github.com/repos/"+repository.owner+"/"+repository.name+"/statuses/"+commitSHA)
+            .header("Accept", "application/vnd.github+json")
+            .header("Authorization", "Bearer "+accessToken)
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .content(new StringContentProvider("{\"state\":\""+statusString+"\",\"description\":\""+description+"\",\"context\":\""+context+"\"}"), "application/json")
+            .send();
+        } catch (InterruptedException | ExecutionException | TimeoutException exception) {
+            // Post request failed
+        }
+
+        client.destroy(); 
         
     }
 
