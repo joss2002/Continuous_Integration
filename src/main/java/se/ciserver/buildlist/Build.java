@@ -1,6 +1,7 @@
 package se.ciserver.buildlist;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Defines a build object that stores the information of each build by the CI-server
@@ -34,6 +35,18 @@ public class Build {
         this.timestamp = timestamp;
         this.status = status;
         this.log = log;
+    }
+
+    public static Build newBuild(String commitId, String branch,
+                                 Status status, String log) {
+        return new Build(
+                UUID.randomUUID().toString(),
+                commitId,
+                branch,
+                Instant.now(),
+                status,
+                log
+        );
     }
 
 }
