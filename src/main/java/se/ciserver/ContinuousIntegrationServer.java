@@ -38,6 +38,7 @@ enum CommitStatus {
 public class ContinuousIntegrationServer extends AbstractHandler
 {
     private final PushParser parser = new PushParser();
+    public static boolean isIntegrationTest = false;
     private HttpClient httpClient;
     private String accessToken;
 
@@ -86,9 +87,21 @@ public class ContinuousIntegrationServer extends AbstractHandler
 
                 setCommitStatus(push, CommitStatus.pending, "Testing in progres...", "ci_server");
 
-                // add automatic test building
-                boolean testsSucceed = true;
+                // RUN TESTS FOR THIS BRANCH
+                if(!isIntegrationTest) {
+                    String testResult;
+                    try {
+                        testResult = TestRunner.runTests(push.ref);
+                        response.getWriter().println(testResult);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        response.getWriter().println("Error running tests: " + e.getMessage());
+                    }
+                    response.setStatus(HttpServletResponse.SC_OK);
+                }
 
+                boolean testsSucceed = true;
                 if (testsSucceed)
                     setCommitStatus(push, CommitStatus.success, "All tests succeeded", "ci_server");
                 else
