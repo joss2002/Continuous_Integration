@@ -92,7 +92,8 @@ public class ContinuousIntegrationServer extends AbstractHandler
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.getWriter().println("Push received: " + push.after);
 
-                setCommitStatus(push, CommitStatus.pending, "Testing in progres...", "ci_server");
+                String githubCommitUrl = "https://api.github.com/repos/"+push.repository.owner.name+"/"+push.repository.name+"/statuses/"+push.after;
+                setCommitStatus(githubCommitUrl, CommitStatus.pending, "Testing in progres...", "ci_server");
 
                 // RUN TESTS FOR THIS BRANCH
                 if(!isIntegrationTest) {
@@ -101,14 +102,14 @@ public class ContinuousIntegrationServer extends AbstractHandler
                         testResult = TestRunner.runTests(push.ref);
                         response.getWriter().println(testResult);
                         if (TestRunner.testSuccess)
-                            setCommitStatus(push, CommitStatus.success, "All tests succeeded", "ci_server");
+                            setCommitStatus(githubCommitUrl, CommitStatus.success, "All tests succeeded", "ci_server");
                         else
-                            setCommitStatus(push, CommitStatus.failure, "Test failures", "ci_server");
+                            setCommitStatus(githubCommitUrl, CommitStatus.failure, "Test failures", "ci_server");
                     } catch (Exception e) {
                         e.printStackTrace();
                         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                         response.getWriter().println("Error running tests: " + e.getMessage());
-                        setCommitStatus(push, CommitStatus.failure, "Error running tests: " + e.getMessage(), "ci_server");
+                        setCommitStatus(githubCommitUrl, CommitStatus.failure, "Error running tests: " + e.getMessage(), "ci_server");
                     }
                     response.setStatus(HttpServletResponse.SC_OK);
                 }
@@ -135,13 +136,13 @@ public class ContinuousIntegrationServer extends AbstractHandler
     }
 
     /**
-     * Send a POST request setting the status of a git commit
-     * @param push          - The git push to set status of
+     * Send a POST request setting the status of a github commit
+     * @param url           - The url of the commit
      * @param status        - The status to set for the commit
      * @param description   - Description of the status
      * @param context       - The system setting the status
      */
-    public void setCommitStatus(Push push,
+    public void setCommitStatus(String url,
                                 CommitStatus status,
                                 String description,
                                 String context)
@@ -162,7 +163,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
         
         try {
             // if push.repository.owner.name can be the full name filled into github this would fail, if its always the username then this works
-            ContentResponse response = httpClient.POST("https://api.github.com/repos/"+push.repository.owner.name+"/"+push.repository.name+"/statuses/"+push.after)
+            ContentResponse response = httpClient.POST(url)
                 .header("Accept", "application/vnd.github+json")
                 .header("Authorization", "Bearer "+accessToken)
                 .header("X-GitHub-Api-Version", "2022-11-28")
