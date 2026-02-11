@@ -109,8 +109,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
 
     /**
      * Send a POST request setting the status of a git commit
-     * @param repository    - The repo the commit is in
-     * @param commitSHA     - The commit's SHA
+     * @param push          - The git push to set status of
      * @param accessToken   - An access token with commit status permission for the repo
      * @param status        - The status to set for the commit
      * @param description   - Description of the status
