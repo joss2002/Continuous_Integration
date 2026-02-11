@@ -43,6 +43,10 @@ public class BuildStoreTest {
         assertTrue("store should start empty when file is missing", all.isEmpty());
     }
 
+    /**
+     * Checks whether the file persist and being reloaded after server restart,
+     * simulated by having another BuildStore object
+     */
     @Test
     public void addPersistsBuildAndCanBeReloaded() {
         // first store: add one build
