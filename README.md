@@ -229,10 +229,15 @@ The compilation result (success/failure) is returned in the HTTP response and pr
 
 #### Unit testing
 
-Compilation is unit-tested in `src/test/java/MainTest.java`:
+Compilation is unit-tested in `src/test/java/MainTest.java` with the following tests:
 
-- `compilationResultStoresValues()` — verifies that `CompilationResult` correctly stores the success flag and build output.
+- `compilationResultStoresSuccess()` — verifies that a successful `CompilationResult` stores `success=true` and the build output.
+- `compilationResultStoresFailure()` — verifies that a failed `CompilationResult` stores `success=false` and the build output.
 - `compilerHandlesCloneFailure()` — subclasses `Compiler` to override `createProcessBuilder()` with a failing command, verifying that a clone failure returns `success=false` without throwing an exception.
+- `compilerReturnsSuccessWhenAllStepsPass()` — subclasses `Compiler` to override `createProcessBuilder()` with a succeeding command, verifying the full pipeline returns `success=true`.
+- `ciServerHandleCompilationOnPush()` — starts a local Jetty server, sends a valid push payload to `/webhook`, and verifies the response is `200` and contains the compilation result with the commit SHA.
+
+To run the tests, see [Perform unit tests](#perform-unit-tests).
 
 ---
 
@@ -249,6 +254,33 @@ mvn clean compile
 ```bash
 mvn test
 ```
+
+3. Verify all tests pass in the output
+
+```console
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+
+BUILD SUCCESS
+```
+
+### Connect the server to a webhook with ngrok
+
+1. Run the server, see [Run the server](#run-the-server).
+
+2. In a separate terminal, start ngrok to expose port `8080`:
+
+```bash
+ngrok http 8080
+```
+
+3. Copy the forwarding URL (e.g. `https://xxxx.ngrok-free.app`) from the ngrok output.
+
+4. In your GitHub repository, go to **Settings > Webhooks > Add webhook** and set:
+   - **Payload URL**: `https://xxxx.ngrok-free.app/webhook`
+   - **Content type**: `application/json`
+   - **Events**: Select "Just the push event"
+
+5. Push a commit to the repository and observe the compilation output in the server console.
 ---
 
 ## Statements of contributions

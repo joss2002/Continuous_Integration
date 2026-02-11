@@ -30,9 +30,11 @@ public class Compiler
 
         try
         {
+            // Create an isolated temporary directory for this build
             tempDir = Files.createTempDirectory("ci-build-");
 
-            // Clone the specific branch
+            // Step 1: Clone only the target branch (--single-branch avoids
+            // downloading the full repo history)
             int cloneExit = runProcess(tempDir.getParent(),
                 "git", "clone", "--branch", branch, "--single-branch",
                 cloneUrl, tempDir.toString());
@@ -43,7 +45,7 @@ public class Compiler
                     "Git clone failed with exit code " + cloneExit);
             }
 
-            // Checkout the exact commit
+            // Step 2: Checkout the exact commit SHA that triggered the webhook
             int checkoutExit = runProcess(tempDir,
                 "git", "checkout", commitSha);
 
@@ -53,7 +55,7 @@ public class Compiler
                     "Git checkout failed with exit code " + checkoutExit);
             }
 
-            // Run Maven compile and capture output
+            // Step 3: Run Maven compilation and return the result
             return runCompilation(tempDir);
         }
         catch (IOException | InterruptedException e)
@@ -63,6 +65,7 @@ public class Compiler
         }
         finally
         {
+            // Always clean up the temporary directory to avoid disk bloat
             if (tempDir != null)
             {
                 cleanup(tempDir);
@@ -87,10 +90,11 @@ public class Compiler
     {
         ProcessBuilder pb = createProcessBuilder(command);
         pb.directory(workDir.toFile());
-        pb.redirectErrorStream(true);
+        pb.redirectErrorStream(true); // Merge stderr into stdout
 
         Process process = pb.start();
 
+        // Consume output line-by-line and print to the server console
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream())))
         {
@@ -101,6 +105,7 @@ public class Compiler
             }
         }
 
+        // Block until the process finishes and return its exit code
         return process.waitFor();
     }
 
@@ -119,10 +124,11 @@ public class Compiler
     {
         ProcessBuilder pb = createProcessBuilder("mvn", "clean", "compile");
         pb.directory(workDir.toFile());
-        pb.redirectErrorStream(true);
+        pb.redirectErrorStream(true); // Merge stderr into stdout
 
         Process process = pb.start();
 
+        // Capture all build output into a single string
         String output;
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream())))
@@ -133,8 +139,10 @@ public class Compiler
 
         int exitCode = process.waitFor();
 
+        // Print Maven output to server console so grader can observe the build
         System.out.println(output);
 
+        // Exit code 0 means compilation succeeded
         return new CompilationResult(exitCode == 0, output);
     }
 
