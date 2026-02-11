@@ -1,9 +1,11 @@
 package se.ciserver;
 
 import java.io.*;
+import java.util.function.Consumer;
 
 public class TestRunner {
 
+    public static Consumer<String[]> commandHook = null;
     /**
      * Executes automated test suite for the specified git branch
      * 
@@ -15,6 +17,11 @@ public class TestRunner {
         // Checkout the correct branch dynamically
         runCommand("git", "checkout", branch);
         runCommand("git", "pull");
+
+        if (commandHook != null) {
+            commandHook.accept(new String[]{"mvn", "-B", "-Dtest=MainTest", "test"});
+            return "Hooked: skipped Maven execution";
+        }
 
         String mvnCommand = "mvn";
         if (System.getProperty("os.name").toLowerCase().contains("win")) {
@@ -42,8 +49,13 @@ public class TestRunner {
         }
     }
 
-
     private static void runCommand(String... command) throws Exception {
+        if (commandHook != null) {
+            commandHook.accept(command); // TEST MODE
+            return;
+        }
+
+
         ProcessBuilder pb = new ProcessBuilder(command);
         Process process = pb.start();
         process.waitFor();
