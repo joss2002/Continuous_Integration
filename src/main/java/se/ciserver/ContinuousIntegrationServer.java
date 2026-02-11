@@ -22,6 +22,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
 {
     private final PushParser parser = new PushParser();
     public static boolean isIntegrationTest = false;
+    private String latestTestOutput = "No tests run yet.";
     /**
      * Handles incoming HTTP requests for the CI server and presents necessary information.
      *
@@ -65,8 +66,11 @@ public class ContinuousIntegrationServer extends AbstractHandler
                     } catch (Exception e) {
                         e.printStackTrace();
                         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                        response.getWriter().println("Error running tests: " + e.getMessage());
+                        testResult = "Error running tests: " + e.getMessage();
                     }
+                    latestTestOutput = "<pre>" + testResult + "</pre>";
+                    response.getWriter().println("Push received: " + push.after);
+                    response.getWriter().println(latestTestOutput);
                     response.setStatus(HttpServletResponse.SC_OK);
                 }
             }
@@ -84,9 +88,11 @@ public class ContinuousIntegrationServer extends AbstractHandler
             response.setStatus(HttpServletResponse.SC_OK);
             baseRequest.setHandled(true);
 
-            System.out.println(target);
-
-            response.getWriter().println("CI job done (placeholder)");
+            if (latestTestOutput != null) {
+                response.getWriter().println(latestTestOutput);
+            } else {
+                response.getWriter().println("CI job done (placeholder)");
+            }
         }
     }
 
