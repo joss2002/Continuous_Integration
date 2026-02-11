@@ -7,6 +7,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.StringContentProvider;
 
 import javax.servlet.http.HttpServletRequest;
@@ -124,6 +125,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
             httpClient.start();
         } catch (Exception e) {
             // Client failed to start
+            System.out.println("Start Http Client failed!");
         }
     }
 
@@ -154,14 +156,20 @@ public class ContinuousIntegrationServer extends AbstractHandler
         }
         
         try {
-            httpClient.POST("https://api.github.com/repos/"+push.repository.owner+"/"+push.repository.name+"/statuses/"+push.after)
+            // if push.repository.owner.name can be the full name filled into github this would fail, if its always the username then this works
+            ContentResponse response = httpClient.POST("https://api.github.com/repos/"+push.repository.owner.name+"/"+push.repository.name+"/statuses/"+push.after)
                 .header("Accept", "application/vnd.github+json")
                 .header("Authorization", "Bearer "+accessToken)
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .content(new StringContentProvider("{\"state\":\""+statusString+"\",\"description\":\""+description+"\",\"context\":\""+context+"\"}"), "application/json")
                 .send();
+
+            if (response.getContentAsString().equals("{\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/commits/statuses#create-a-commit-status\",\"status\":\"404\"}")) {
+                System.out.println("Set Commit Status failed, possibly wrong repository url");
+            }
         } catch (InterruptedException | ExecutionException | TimeoutException exception) {
             // Post request failed
+            System.out.println("Set Commit Status failed");
         }
         
     }
