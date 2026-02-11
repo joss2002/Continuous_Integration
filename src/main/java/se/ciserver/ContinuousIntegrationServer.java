@@ -96,6 +96,23 @@ public class ContinuousIntegrationServer extends AbstractHandler
     }
 
     /**
+     * Create and start a HttpClient
+     * @return started HttpClient
+     */
+    public HttpClient startHttpClient()
+    {
+        SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
+        HttpClient client = new HttpClient(sslContextFactory);
+        try {
+            client.start();
+        } catch (Exception e) {
+            // Client failed to start
+        }
+
+        return client;
+    }
+
+    /**
      * Send a POST request setting the status of a git commit
      * @param repository    - The repo the commit is in
      * @param commitSHA     - The commit's SHA
@@ -104,7 +121,8 @@ public class ContinuousIntegrationServer extends AbstractHandler
      * @param description   - Description of the status
      * @param context       - The system setting the status
      */
-    public void setCommitStatus(Repository repository,
+    public void setCommitStatus(HttpClient client,
+                                Repository repository,
                                 String commitSHA,
                                 String accessToken,
                                 CommitStatus status,
@@ -126,14 +144,6 @@ public class ContinuousIntegrationServer extends AbstractHandler
                 statusString = "success";
                 break;
         }
-
-        SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
-        HttpClient client = new HttpClient(sslContextFactory);
-        try {
-            client.start();
-        } catch (Exception e) {
-            //
-        }
         
         try {
         ContentResponse response = client.POST("https://api.github.com/repos/"+repository.owner+"/"+repository.name+"/statuses/"+commitSHA)
@@ -145,8 +155,6 @@ public class ContinuousIntegrationServer extends AbstractHandler
         } catch (InterruptedException | ExecutionException | TimeoutException exception) {
             // Post request failed
         }
-
-        client.destroy(); 
         
     }
 
