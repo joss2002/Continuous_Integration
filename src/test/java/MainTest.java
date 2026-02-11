@@ -30,7 +30,7 @@ public class MainTest
     public void ciServerHandlePushValidPayloadLocal() throws Exception
     {
         Server server = new Server(0);
-        server.setHandler(new ContinuousIntegrationServer());
+        server.setHandler(new ContinuousIntegrationServer(""));
         server.start();
         int port = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
 
@@ -64,7 +64,7 @@ public class MainTest
     public void ciServerHandlePushInvalidPayloadLocal() throws Exception
     {
         Server server = new Server(0);
-        server.setHandler(new ContinuousIntegrationServer());
+        server.setHandler(new ContinuousIntegrationServer(""));
         server.start();
         int port = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
 

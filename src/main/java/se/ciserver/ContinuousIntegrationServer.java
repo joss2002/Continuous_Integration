@@ -38,6 +38,16 @@ public class ContinuousIntegrationServer extends AbstractHandler
 {
     private final PushParser parser = new PushParser();
     private HttpClient httpClient;
+    private String accessToken;
+
+    /**
+     * Constructs the ContinuousIntegrationServer
+     * @param accessToken A githubs access token with commit status permission for the repository
+     */
+    public ContinuousIntegrationServer(String accessToken) {
+        this.accessToken = accessToken;
+        startHttpClient();
+    }
 
     /**
      * Handles incoming HTTP requests for the CI server and presents necessary information.
@@ -72,6 +82,16 @@ public class ContinuousIntegrationServer extends AbstractHandler
 
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.getWriter().println("Push received: " + push.after);
+
+                setCommitStatus(push, CommitStatus.pending, "Testing in progres...", "ci_server");
+
+                // add automatic test building
+                boolean testsSucceed = true;
+
+                if (testsSucceed)
+                    setCommitStatus(push, CommitStatus.success, "All tests succeeded", "ci_server");
+                else
+                    setCommitStatus(push, CommitStatus.failure, "Test failures", "ci_server");
             }
             catch (InvalidPayloadException e)
             {
@@ -110,13 +130,11 @@ public class ContinuousIntegrationServer extends AbstractHandler
     /**
      * Send a POST request setting the status of a git commit
      * @param push          - The git push to set status of
-     * @param accessToken   - An access token with commit status permission for the repo
      * @param status        - The status to set for the commit
      * @param description   - Description of the status
      * @param context       - The system setting the status
      */
     public void setCommitStatus(Push push,
-                                String accessToken,
                                 CommitStatus status,
                                 String description,
                                 String context)
@@ -157,8 +175,12 @@ public class ContinuousIntegrationServer extends AbstractHandler
      */
     public static void main(String[] args) throws Exception
     {
+        if (args.length<1) {
+            System.out.println("Too few arguments, needs 1: github access token");
+        }
+
         Server server = new Server(8080);
-        server.setHandler(new ContinuousIntegrationServer());
+        server.setHandler(new ContinuousIntegrationServer(args[0]));
         server.start();
         server.join();
     }
