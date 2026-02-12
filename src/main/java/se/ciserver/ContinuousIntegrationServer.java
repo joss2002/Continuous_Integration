@@ -109,6 +109,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
                     System.out.println("\nCompilation FAILED");
                 }
 
+                // Construct the current build into the history list
                 Build build = Build.newBuild(push.after, push.ref, result.success, result.output);
                 store.add(build);
 
@@ -199,6 +200,94 @@ public class ContinuousIntegrationServer extends AbstractHandler
                 response.getWriter().println(html.toString());
             }
             baseRequest.setHandled(true);
+        }
+        else if (target.startsWith("/builds") && "GET".equalsIgnoreCase(request.getMethod())) {
+            // Build history endpoints
+            response.setContentType("text/html;charset=utf-8");
+            response.setStatus(HttpServletResponse.SC_OK);
+
+            // Check if this is /builds or /builds/<id>
+            if ("/builds".equals(target) || "/builds/".equals(target)) {
+                // List view
+                StringBuilder html = new StringBuilder();
+                html.append("<!DOCTYPE html>")
+                    .append("<html><head><meta charset=\"utf-8\">")
+                    .append("<title>Build history</title>")
+                    .append("</head><body>")
+                    .append("<h1>Build history</h1>");
+
+                java.util.List<Build> builds = store.getAll();
+                if (builds.isEmpty()) {
+                    html.append("<p>No builds recorded yet.</p>");
+                } else {
+                    html.append("<table border=\"1\" cellspacing=\"0\" cellpadding=\"4\">")
+                        .append("<tr>")
+                        .append("<th>Build ID</th>")
+                        .append("<th>Commit</th>")
+                        .append("<th>Branch</th>")
+                        .append("<th>Timestamp</th>")
+                        .append("<th>Status</th>")
+                        .append("</tr>");
+
+                    for (Build b : builds) {
+                        html.append("<tr>")
+                            .append("<td><a href=\"/builds/").append(b.id).append("\">")
+                            .append(b.id)
+                            .append("</a></td>")
+                            .append("<td>").append(b.commitId).append("</td>")
+                            .append("<td>").append(b.branch).append("</td>")
+                            .append("<td>").append(b.timestamp).append("</td>")
+                            .append("<td>").append(Boolean.TRUE.equals(b.status) ? "SUCCESS" : "FAILURE").append("</td>")
+                            .append("</tr>");
+                    }
+                    html.append("</table>");
+                }
+
+                html.append("</body></html>");
+                response.getWriter().println(html.toString());
+                baseRequest.setHandled(true);
+            } else {
+                // Detail view: /builds/<id>
+                String[] parts = target.split("/");
+                String id = parts.length >= 3 ? parts[2] : null;
+
+                if (id == null || id.isEmpty()) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    response.getWriter().println("Missing build id");
+                    baseRequest.setHandled(true);
+                    return;
+                }
+
+                Build b = store.getById(id);
+                if (b == null) {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    response.getWriter().println("Build not found: " + id);
+                    baseRequest.setHandled(true);
+                    return;
+                }
+
+                StringBuilder html = new StringBuilder();
+                html.append("<!DOCTYPE html>")
+                    .append("<html><head><meta charset=\"utf-8\">")
+                    .append("<title>Build ").append(b.id).append("</title>")
+                    .append("</head><body>")
+                    .append("<h1>Build ").append(b.id).append("</h1>")
+                    .append("<p><strong>Commit:</strong> ").append(b.commitId).append("</p>")
+                    .append("<p><strong>Branch:</strong> ").append(b.branch).append("</p>")
+                    .append("<p><strong>Timestamp:</strong> ").append(b.timestamp).append("</p>")
+                    .append("<p><strong>Status:</strong> ")
+                    .append(Boolean.TRUE.equals(b.status) ? "SUCCESS" : "FAILURE")
+                    .append("</p>")
+                    .append("<h2>Build log</h2>")
+                    .append("<pre>")
+                    .append(b.log == null ? "" : b.log)
+                    .append("</pre>")
+                    .append("<p><a href=\"/builds\">Back to build history</a></p>")
+                    .append("</body></html>");
+
+                response.getWriter().println(html.toString());
+                baseRequest.setHandled(true);
+            }
         }
         else // Placeholder for other endpoints
         {
