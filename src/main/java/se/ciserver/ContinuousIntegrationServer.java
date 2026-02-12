@@ -23,7 +23,7 @@ import se.ciserver.github.PushParser;
 public class ContinuousIntegrationServer extends AbstractHandler
 {
     private final PushParser parser = new PushParser();
-    private final BuildStore store = new BuildStore("build-history.json");
+    private final BuildStore store = new BuildStore("buildhist/build-history.json");
 
     /**
      * Handles incoming HTTP requests for the CI server and presents necessary information.
