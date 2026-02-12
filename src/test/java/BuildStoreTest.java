@@ -52,7 +52,7 @@ public class BuildStoreTest {
         // first store: add one build
         BuildStore store1 = new BuildStore(TEST_FILE);
         Build build = Build.newBuild("commit1", "assessment",
-                                     Build.Status.SUCCESS, "log1");
+                                     true, "log1");
         store1.add(build);
 
         List<Build> all1 = store1.getAll();
@@ -73,8 +73,8 @@ public class BuildStoreTest {
     @Test
     public void getByIdReturnsCorrectBuildOrNull() {
         BuildStore store = new BuildStore(TEST_FILE);
-        Build b1 = Build.newBuild("c1", "assessment", Build.Status.SUCCESS, "log1");
-        Build b2 = Build.newBuild("c2", "assessment", Build.Status.FAILURE, "log2");
+        Build b1 = Build.newBuild("c1", "assessment", true, "log1");
+        Build b2 = Build.newBuild("c2", "assessment", false, "log2");
 
         store.add(b1);
         store.add(b2);

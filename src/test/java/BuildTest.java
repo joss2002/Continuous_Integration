@@ -14,7 +14,7 @@ public class BuildTest {
     public void newBuild_setsAllFields() {
         String commitId = "abc123";
         String branch = "assessment";
-        Build.Status status = Build.Status.SUCCESS;
+        Boolean status = true;
         String log = "build output";
 
         Build b = Build.newBuild(commitId, branch, status, log);

@@ -8,13 +8,11 @@ import java.util.UUID;
  */
 public class Build {
 
-    public enum Status { SUCCESS, FAILURE }
-
     public String id;
     public String commitId;
     public String branch;
     public String timestamp;
-    public Status status;
+    public Boolean status;
     public String log;
 
     /**
@@ -34,7 +32,7 @@ public class Build {
      * @param log       Output produced during the build and tests
      */
     public Build(String id, String commitId, String branch,
-                 String timestamp, Status status, String log) {
+                 String timestamp, Boolean status, String log) {
         this.id = id;
         this.commitId = commitId;
         this.branch = branch;
@@ -44,7 +42,7 @@ public class Build {
     }
 
     public static Build newBuild(String commitId, String branch,
-                                 Status status, String log) {
+                                 Boolean status, String log) {
         return new Build(
                 UUID.randomUUID().toString(),
                 commitId,
