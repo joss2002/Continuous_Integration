@@ -1,5 +1,7 @@
 ## Host CI-server locally
 
+Assessment test
+
 ### Prerequisites
 - Java 8
 - Java JDK 17
