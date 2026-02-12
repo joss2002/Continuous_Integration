@@ -362,7 +362,7 @@ Each build has a unique URL of the form:
 
 ```text
 http://<server-host>:8080/builds/<build-id>
-````---
+````
 
 ## The states of the team
 
